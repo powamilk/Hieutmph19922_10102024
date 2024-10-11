@@ -1,6 +1,7 @@
 ﻿using AppData.Entities;
 using AppData.Repository.Implement;
 using AppData.Repository.Interface;
+using FluentValidation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,17 +11,26 @@ namespace AppAPI.Controllers
     [ApiController]
     public class VeMayBayController : ControllerBase
     {
-        private readonly IVeMayBayRepo _veMayBayRepo;
+        private readonly IVeMayBayRepo _repository;
+        private readonly IValidator<VeMayBay> _validator;
 
-        public VeMayBayController(IVeMayBayRepo veMayBayRepo)
+        public VeMayBayController(IVeMayBayRepo repository, IValidator<VeMayBay> validator)
         {
-            _veMayBayRepo = veMayBayRepo;
+            _repository = repository;
+            _validator = validator;
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<VeMayBay>>> GetAll()
+        {
+            var veMayBays = await _repository.GetAllAsync();
+            return Ok(veMayBays);
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<VeMayBay>> GetById(Guid id)
         {
-            var veMayBay = await _veMayBayRepo.GetIdAssync(id);
+            var veMayBay = await _repository.GetByIdAsync(id);
             if (veMayBay == null)
             {
                 return NotFound();
@@ -28,48 +38,60 @@ namespace AppAPI.Controllers
             return Ok(veMayBay);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] VeMayBay veMayBay)
-        {
-            if(id != veMayBay.Id)
-            {
-                return BadRequest("Ve May Bay Ko ton Tai");    
-            }
-            var existinVeMayBay = await _veMayBayRepo.GetIdAssync(id);
-            if (existinVeMayBay == null)
-            {
-                return NotFound();
-            }    
-            existinVeMayBay.TenKhachHang = veMayBay.TenKhachHang;
-            existinVeMayBay.SoHieuChuyenBay = veMayBay.SoHieuChuyenBay;
-            existinVeMayBay.NgayBay = veMayBay.NgayBay;
-            existinVeMayBay.DiemDen = veMayBay.DiemDen;
-            existinVeMayBay.DiemKhoiHanh = veMayBay.DiemKhoiHanh;
-            existinVeMayBay.GiaVe = veMayBay.GiaVe; 
-
-            await _veMayBayRepo.UpdateAsync(existinVeMayBay);
-            return Ok();   
-        }
-
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<VeMayBay>>> GetAll()
-        {
-            var veMayBays = await _veMayBayRepo.GetAllAsync();
-            return Ok(veMayBays);
-        }
-
         [HttpPost]
         public async Task<ActionResult> Create([FromBody] VeMayBay veMayBay)
         {
-            await _veMayBayRepo.AddAsync(veMayBay);
-            return CreatedAtAction(nameof(GetById), new { id = veMayBay.Id }, veMayBay);
+            var validationResult = await _validator.ValidateAsync(veMayBay);
+            if (!validationResult.IsValid)
+            {
+                return BadRequest(validationResult.Errors.Select(e => new
+                {
+                    field = e.PropertyName,
+                    message = e.ErrorMessage
+                }));
+            }
+
+            var createdVeMayBay = await _repository.AddAsync(veMayBay);
+            return CreatedAtAction(nameof(GetById), new { id = createdVeMayBay.Id }, createdVeMayBay);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] VeMayBay veMayBay)
+        {
+            var validationResult = await _validator.ValidateAsync(veMayBay);
+            if (!validationResult.IsValid)
+            {
+                return BadRequest(validationResult.Errors.Select(e => new
+                {
+                    field = e.PropertyName,
+                    message = e.ErrorMessage
+                }));
+            }
+
+            var result = await _repository.UpdateAsync(id, veMayBay);
+            if (!result)
+            {
+                return NotFound();
+            }
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            var result = await _repository.DeleteAsync(id);
+            if (!result)
+            {
+                return NotFound();
+            }
+            return NoContent();
         }
 
 
         [HttpGet("tonggia")]
         public async Task<ActionResult<decimal>> TinhTongGiaVe(int quantity, decimal pricePerTicket)
         {
-            var totalPrice = await _veMayBayRepo.TinhToanVeMayBayAsync(quantity, pricePerTicket);
+            var totalPrice = await _repository.TinhToanVeMayBayAsync(quantity, pricePerTicket);
             return Ok(totalPrice);
         }
     }

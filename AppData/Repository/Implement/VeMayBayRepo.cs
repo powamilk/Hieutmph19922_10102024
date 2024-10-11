@@ -17,21 +17,22 @@ namespace AppData.Repository.Implement
             _context = context; 
         }
 
-        public async Task AddAsync(VeMayBay veMayBay)
+        public async Task<VeMayBay> AddAsync(VeMayBay veMayBay)
         {
             veMayBay.Id = Guid.NewGuid();
             _context.VeMayBays.Add(veMayBay);
             await _context.SaveChangesAsync();
+            return veMayBay;
         }
 
-        public async Task DeleteAsync(Guid id)
+        public async Task<bool> DeleteAsync(Guid id)
         {
-            var veMayBay = await _context.VeMayBays.FindAsync(id);
-            if (veMayBay != null)
-            {
-                _context.VeMayBays.Remove(veMayBay);
-                await _context.SaveChangesAsync();
-            }
+            var existingVeMayBay = await GetByIdAsync(id);
+            if (existingVeMayBay == null) return false;
+
+            _context.VeMayBays.Remove(existingVeMayBay);
+            await _context.SaveChangesAsync();
+            return true;
         }
 
         public async Task<IEnumerable<VeMayBay>> GetAllAsync()
@@ -39,7 +40,7 @@ namespace AppData.Repository.Implement
             return await _context.VeMayBays.ToListAsync();
         }
 
-        public async Task<VeMayBay> GetIdAssync(Guid id)
+        public async Task<VeMayBay> GetByIdAsync(Guid id)
         {
             return await _context.VeMayBays.FindAsync(id);
         }
@@ -49,10 +50,14 @@ namespace AppData.Repository.Implement
             return Task.FromResult(quantity * pricePerTicket);
         }
 
-        public async Task UpdateAsync(VeMayBay veMayBay)
+        public async Task<bool> UpdateAsync(Guid id, VeMayBay veMayBay)
         {
-            _context.VeMayBays.Update(veMayBay);
+            var existingVeMayBay = await GetByIdAsync(id);
+            if (existingVeMayBay == null) return false;
+
+            _context.Entry(existingVeMayBay).CurrentValues.SetValues(veMayBay);
             await _context.SaveChangesAsync();
+            return true;
         }
     }
 }

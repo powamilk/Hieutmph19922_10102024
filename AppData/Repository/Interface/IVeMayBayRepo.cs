@@ -9,11 +9,11 @@ namespace AppData.Repository.Interface
 {
     public interface IVeMayBayRepo
     {
-        Task<VeMayBay> GetIdAssync(Guid id);
-        Task<IEnumerable<VeMayBay>> GetAllAsync(); 
-        Task AddAsync(VeMayBay veMayBay);
-        Task UpdateAsync(VeMayBay veMayBay);
-        Task DeleteAsync(Guid id); 
+        Task<IEnumerable<VeMayBay>> GetAllAsync();
+        Task<VeMayBay> GetByIdAsync(Guid id);
+        Task<VeMayBay> AddAsync(VeMayBay veMayBay);
+        Task<bool> UpdateAsync(Guid id, VeMayBay veMayBay);
+        Task<bool> DeleteAsync(Guid id);
         Task<decimal> TinhToanVeMayBayAsync(int quantity, decimal pricePerTicket);
     }
 }

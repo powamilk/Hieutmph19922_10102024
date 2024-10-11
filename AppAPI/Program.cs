@@ -1,6 +1,8 @@
 using AppData.Entities;
 using AppData.Repository.Implement;
 using AppData.Repository.Interface;
+using AppData.Validator;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +13,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection"),
         b => b.MigrationsAssembly("AppAPI")
     ));
+
+builder.Services.AddScoped<IValidator<VeMayBay>, VeMayBayValidator>();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<ValidationFilter>();
+});
 
 builder.Services.AddScoped<IVeMayBayRepo, VeMayBayRepo>();
 
